@@ -43,7 +43,7 @@ Many developers assume NoSQL databases are immune to SQL Injection attacks becau
 ## Comprehension
 
 ### Understanding Blind NoSQL Injection
-Blind NoSQL Injection occurs when an attacker interacts with a NoSQL database in a way that does not return direct error messages. Instead, the attacker deduces information through **Boolean logic, time delays, or Out-of-Band (OOB) techniques**.
+Blind NoSQL Injection occurs when an attacker interacts with a NoSQL database in a way that does not return direct error messages. Instead, the attacker assume information through **Boolean logic, time delays, or Out-of-Band (OOB) techniques**.
 
 ```
 User Input  ---> Application  ---> Database Query
